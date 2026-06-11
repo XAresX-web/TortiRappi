@@ -8,7 +8,7 @@
    ============================================================ */
 
 // 1. Pega aquí la "Project URL" de tu proyecto Supabase
-const SUPABASE_URL = 'https://qbawcklgkhposyxxoqsn.supabase.com';
+const SUPABASE_URL = 'https://qbawcklgkhposyxxoqsn.supabase.co';
 
 // 2. Pega aquí la "anon public key" (es segura de exponer)
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFiYXdja2xna2hwb3N5eHhvcXNuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODExNzgzMzMsImV4cCI6MjA5Njc1NDMzM30.a-DefhHglBPQYliQwySXVzyvFQhMdMrz0lGr9Vz10qc';
