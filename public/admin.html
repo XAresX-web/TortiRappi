@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Panel — TortillaRuta</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar-logo" href="admin.html">Tortilla<span>Ruta</span></a>
+  <div class="topbar-right">
+    <span class="badge badge-teal" id="online-badge"><span class="pulse-dot"></span> En línea</span>
+    <a href="repartidor.html" class="btn btn-outline btn-sm">Vista repartidor</a>
+    <button class="btn btn-outline btn-sm" onclick="openModal('config')">⚙️</button>
+    <div class="user-chip">
+      <div class="av" id="user-av">?</div>
+    </div>
+    <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Salir</button>
+  </div>
+</header>
+
+<div class="alert alert-offline" id="offline-bar" style="margin:8px 16px 0;display:none;">
+  ⚠️ Sin conexión — Reconectando...
+</div>
+
+<main class="page">
+
+  <!-- Encabezado negocio -->
+  <div style="margin-bottom:14px;">
+    <h1 style="font-size:18px;font-weight:800;" id="org-nombre">Cargando...</h1>
+    <p style="font-size:12px;color:var(--gray);" id="org-plan"></p>
+  </div>
+
+  <!-- MÉTRICAS -->
+  <div class="metrics" id="metricas">
+    <div class="metric"><div class="skeleton" style="height:24px;width:40px;margin:0 auto;"></div><div class="metric-lbl">Pedidos hoy</div></div>
+    <div class="metric"><div class="skeleton" style="height:24px;width:40px;margin:0 auto;"></div><div class="metric-lbl">Entregados</div></div>
+    <div class="metric"><div class="skeleton" style="height:24px;width:40px;margin:0 auto;"></div><div class="metric-lbl">En ruta</div></div>
+    <div class="metric"><div class="skeleton" style="height:24px;width:40px;margin:0 auto;"></div><div class="metric-lbl">Pendientes</div></div>
+  </div>
+
+  <!-- MAPA REAL -->
+  <div class="card">
+    <div class="card-title">📍 Mapa en vivo — Repartidores</div>
+    <div id="gmap-admin"></div>
+    <div id="rep-chips" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;"></div>
+  </div>
+
+  <!-- PEDIDOS -->
+  <div class="card">
+    <div class="section-hdr">
+      <h2>📦 Pedidos de hoy</h2>
+      <div style="display:flex;gap:6px;">
+        <select id="filtro-estado" onchange="renderPedidos()" class="btn btn-outline btn-sm" style="padding:5px 8px;">
+          <option value="">Todos</option>
+          <option value="pendiente">Pendientes</option>
+          <option value="en_ruta">En ruta</option>
+          <option value="entregado">Entregados</option>
+        </select>
+        <button class="btn btn-primary btn-sm" onclick="openModal('nuevo-pedido')">+ Nuevo pedido</button>
+      </div>
+    </div>
+    <div id="lista-pedidos"><div class="skeleton" style="height:60px;margin-bottom:8px;"></div><div class="skeleton" style="height:60px;"></div></div>
+  </div>
+
+  <!-- REPARTIDORES -->
+  <div class="card">
+    <div class="section-hdr">
+      <h2>🛵 Repartidores</h2>
+      <button class="btn btn-outline btn-sm" id="btn-add-rep" onclick="openModal('nuevo-rep')">+ Agregar</button>
+    </div>
+    <div id="lista-reps"></div>
+    <div id="rep-limit-msg" style="display:none;" class="alert alert-warn" style="margin-top:8px;"></div>
+  </div>
+
+  <!-- RENDIMIENTO -->
+  <div class="card">
+    <div class="card-title">📊 Rendimiento de hoy</div>
+    <div id="tabla-rendimiento"></div>
+  </div>
+
+</main>
+
+<!-- ===== MODAL: NUEVO PEDIDO ===== -->
+<div class="modal-overlay" id="modal-nuevo-pedido">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Nuevo pedido</div>
+      <button class="modal-close" onclick="closeModal('nuevo-pedido')">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nombre del cliente *</label>
+        <input type="text" id="f-nombre" placeholder="Ej. Ana García">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="f-tel" placeholder="33 1234 5678">
+      </div>
+    </div>
+    <div class="form-group full" style="margin-bottom:10px;">
+      <label>Dirección de entrega *</label>
+      <input type="text" id="f-dir" placeholder="Calle, número, colonia, referencias">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Producto</label>
+        <select id="f-prod">
+          <option>Tortilla de maíz 500g</option>
+          <option>Tortilla de maíz 1kg</option>
+          <option>Tortilla de maíz 2kg</option>
+          <option>Tortilla de harina 500g</option>
+          <option>Tortilla de harina 1kg</option>
+          <option>Paquete mixto 3kg</option>
+          <option>Paquete mixto 5kg</option>
+          <option>Otro (escribir en notas)</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Total ($)</label>
+        <input type="number" id="f-total" placeholder="78" step="0.5">
+      </div>
+    </div>
+    <div class="form-group full" style="margin-bottom:10px;">
+      <label>Notas del pedido</label>
+      <textarea id="f-notas" placeholder="Instrucciones especiales, referencias..."></textarea>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Asignar repartidor</label>
+        <select id="f-rep">
+          <option value="">⚪ Sin asignar</option>
+        </select>
+      </div>
+      <div class="form-group" style="justify-content:flex-end;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="f-urgente" style="width:auto;"> Marcar urgente 🔴
+        </label>
+      </div>
+    </div>
+    <div class="alert alert-info" style="margin-bottom:12px;">
+      ✨ Se generará un link de tracking automático para enviar al cliente por WhatsApp.
+    </div>
+    <button class="btn btn-primary btn-full" id="btn-crear-pedido" onclick="crearPedido()">
+      Crear pedido y generar link de tracking
+    </button>
+  </div>
+</div>
+
+<!-- ===== MODAL: ASIGNAR ===== -->
+<div class="modal-overlay" id="modal-asignar">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Asignar repartidor — <span id="modal-asignar-num"></span></div>
+      <button class="modal-close" onclick="closeModal('asignar')">✕</button>
+    </div>
+    <div class="alert alert-info" id="sugerencia-cercano" style="margin-bottom:12px;display:none;"></div>
+    <div id="modal-rep-list"></div>
+    <div class="sep"></div>
+    <button class="btn btn-primary btn-full" onclick="confirmarAsignacion()">Confirmar asignación</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: DETALLE ===== -->
+<div class="modal-overlay" id="modal-detalle">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Detalle del pedido</div>
+      <button class="modal-close" onclick="closeModal('detalle')">✕</button>
+    </div>
+    <div id="modal-detalle-body"></div>
+  </div>
+</div>
+
+<!-- ===== MODAL: NUEVO REPARTIDOR ===== -->
+<div class="modal-overlay" id="modal-nuevo-rep">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">Agregar repartidor</div>
+      <button class="modal-close" onclick="closeModal('nuevo-rep')">✕</button>
+    </div>
+    <div class="alert alert-info" style="margin-bottom:12px;">
+      Se creará una cuenta de acceso para que el repartidor entre desde su celular en
+      <strong>repartidor.html</strong> con su correo y contraseña.
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nombre completo *</label>
+        <input type="text" id="r-nombre" placeholder="Juan García">
+      </div>
+      <div class="form-group">
+        <label>Teléfono</label>
+        <input type="tel" id="r-tel" placeholder="33 XXXX XXXX">
+      </div>
+    </div>
+    <div class="form-group full" style="margin-bottom:10px;">
+      <label>Zona de cobertura</label>
+      <input type="text" id="r-zona" placeholder="Ej. Centro, Col. Zapopan">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Correo de acceso *</label>
+        <input type="email" id="r-email" placeholder="repartidor@correo.com">
+      </div>
+      <div class="form-group">
+        <label>Contraseña *</label>
+        <input type="password" id="r-password" placeholder="Mínimo 6 caracteres">
+      </div>
+    </div>
+    <button class="btn btn-primary btn-full" id="btn-crear-rep" onclick="crearRepartidor()">Agregar repartidor</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: CONFIG ===== -->
+<div class="modal-overlay" id="modal-config">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">⚙️ Configuración del negocio</div>
+      <button class="modal-close" onclick="closeModal('config')">✕</button>
+    </div>
+    <div class="form-group full" style="margin-bottom:10px;">
+      <label>Nombre del negocio</label>
+      <input type="text" id="cfg-nombre">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>WhatsApp (con código país)</label>
+        <input type="tel" id="cfg-tel" placeholder="5213312345678">
+      </div>
+      <div class="form-group">
+        <label>Plan actual</label>
+        <input type="text" id="cfg-plan" disabled>
+      </div>
+    </div>
+    <div class="form-group full" style="margin-bottom:12px;">
+      <label>Dirección del negocio</label>
+      <input type="text" id="cfg-dir">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="guardarConfig()">Guardar configuración</button>
+    <div class="sep"></div>
+    <p style="font-size:12px;color:var(--gray);text-align:center;">TortillaRuta SaaS v2.0</p>
+  </div>
+</div>
+
+<!-- ===== MODAL: TRACKING LINK ===== -->
+<div class="modal-overlay" id="modal-tracking">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">📲 Link de tracking</div>
+      <button class="modal-close" onclick="closeModal('tracking')">✕</button>
+    </div>
+    <div id="wa-preview-body"></div>
+    <a id="wa-btn-directo" href="#" target="_blank">
+      <button class="btn btn-wa btn-full">Abrir WhatsApp y enviar al cliente</button>
+    </a>
+    <button class="btn btn-outline btn-full" style="margin-top:8px;" onclick="copiarMensajeWA()">📋 Copiar mensaje</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/maps-loader.js"></script>
+<script src="js/admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Registra tu negocio — TortillaRuta</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .auth-card { max-width: 420px; width: 100%; }
+    .auth-logo { text-align: center; margin-bottom: 24px; }
+    .auth-logo .name { font-size: 24px; font-weight: 800; color: var(--primary-dark); }
+    .auth-logo .name span { color: var(--accent); }
+    .auth-logo .tag { font-size: 13px; color: var(--gray); margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="name">Tortilla<span>Ruta</span></div>
+      <div class="tag">Crea la cuenta de tu negocio — gratis para empezar</div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:16px;margin-bottom:14px;">Registra tu negocio</h2>
+
+      <div id="error-box" class="alert alert-danger" style="display:none;"></div>
+      <div id="success-box" class="alert alert-success" style="display:none;"></div>
+
+      <div class="form-group full" style="margin-bottom:10px;">
+        <label>Nombre de tu negocio *</label>
+        <input type="text" id="r-negocio" placeholder="Ej. Tortillería El Molino">
+      </div>
+      <div class="form-group full" style="margin-bottom:10px;">
+        <label>Tu nombre (dueño/encargado) *</label>
+        <input type="text" id="r-nombre" placeholder="Ej. Juan Pérez">
+      </div>
+      <div class="form-group full" style="margin-bottom:10px;">
+        <label>WhatsApp del negocio (con código de país)</label>
+        <input type="tel" id="r-tel" placeholder="5213312345678">
+        <span style="font-size:11px;color:var(--gray);">Sin espacios ni guiones, ej: 521 + 10 dígitos</span>
+      </div>
+
+      <div class="sep"></div>
+
+      <div class="form-group full" style="margin-bottom:10px;">
+        <label>Correo electrónico *</label>
+        <input type="email" id="r-email" placeholder="tu@correo.com" autocomplete="email">
+      </div>
+      <div class="form-group full" style="margin-bottom:14px;">
+        <label>Contraseña *</label>
+        <input type="password" id="r-password" placeholder="Mínimo 6 caracteres" autocomplete="new-password">
+      </div>
+
+      <button class="btn btn-primary btn-full" id="btn-registro" onclick="hacerRegistro()">Crear mi cuenta</button>
+
+      <div class="sep"></div>
+
+      <p style="text-align:center;font-size:13px;color:var(--gray);">
+        ¿Ya tienes cuenta?
+        <a href="login.html" style="color:var(--primary-dark);font-weight:700;text-decoration:none;">Inicia sesión</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+async function hacerRegistro() {
+  const negocio  = document.getElementById('r-negocio').value.trim();
+  const nombre   = document.getElementById('r-nombre').value.trim();
+  const tel      = document.getElementById('r-tel').value.trim();
+  const email    = document.getElementById('r-email').value.trim();
+  const password = document.getElementById('r-password').value;
+
+  const errBox = document.getElementById('error-box');
+  const okBox  = document.getElementById('success-box');
+  const btn    = document.getElementById('btn-registro');
+
+  errBox.style.display = 'none';
+  okBox.style.display  = 'none';
+
+  if (!negocio || !nombre || !email || !password) {
+    errBox.textContent = 'Completa todos los campos obligatorios (*).';
+    errBox.style.display = 'flex';
+    return;
+  }
+  if (password.length < 6) {
+    errBox.textContent = 'La contraseña debe tener al menos 6 caracteres.';
+    errBox.style.display = 'flex';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Creando cuenta...';
+
+  const { error, data } = await Auth.registrarNegocio({
+    email, password,
+    nombreNegocio: negocio,
+    nombreDueño: nombre,
+    telefonoWA: tel,
+  });
+
+  if (error) {
+    errBox.textContent = error;
+    errBox.style.display = 'flex';
+    btn.disabled = false;
+    btn.textContent = 'Crear mi cuenta';
+    return;
+  }
+
+  okBox.textContent = '¡Cuenta creada! Redirigiendo a tu panel...';
+  okBox.style.display = 'flex';
+
+  setTimeout(async () => {
+    // Verificar si requiere confirmación de email
+    const session = await Auth.getSession();
+    if (session) {
+      window.location.href = 'admin.html';
+    } else {
+      okBox.textContent = '¡Cuenta creada! Revisa tu correo para confirmar tu cuenta, luego inicia sesión.';
+      btn.style.display = 'none';
+      setTimeout(() => window.location.href = 'login.html', 3000);
+    }
+  }, 1000);
+}
+
+document.getElementById('r-password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') hacerRegistro();
+});
+</script>
+</body>
+</html>

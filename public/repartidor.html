@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Mi Ruta — TortillaRuta</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1D9E75">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="TortillaRuta">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <style>
+    .photo-zone input[type=file] { display:none; }
+    .gps-status { display:flex; align-items:center; gap:6px; font-size:12px; padding:6px 10px; border-radius:6px; }
+    .gps-on  { background: var(--green-light); color: var(--green); }
+    .gps-off { background: var(--red-light); color: var(--red); }
+  </style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="topbar-logo" href="admin.html">Tortilla<span>Ruta</span></a>
+  <div class="topbar-right">
+    <span class="badge" id="conn-badge"><span class="pulse-dot"></span> En línea</span>
+    <button class="btn btn-outline btn-sm" onclick="Auth.logout()">Salir</button>
+  </div>
+</header>
+
+<div class="alert alert-offline" id="offline-bar" style="margin:8px 16px 0;">
+  ⚠️ Sin conexión — Tus entregas se guardan localmente y se subirán al reconectar.
+</div>
+
+<main class="page" style="padding-bottom:40px;">
+
+  <!-- PERFIL -->
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:12px;">
+      <div class="rep-avatar" id="rep-avatar" style="background:var(--primary-light);color:var(--primary-dark);width:48px;height:48px;font-size:18px;">?</div>
+      <div style="flex:1;">
+        <div id="rep-nombre" style="font-weight:800;font-size:16px;">Cargando...</div>
+        <div id="rep-zona" style="font-size:12px;color:var(--gray);"></div>
+      </div>
+      <div style="text-align:right;">
+        <div style="font-size:11px;color:var(--gray);">Hoy</div>
+        <div id="rep-score" style="font-size:22px;font-weight:800;color:var(--primary);">0/0</div>
+      </div>
+    </div>
+    <div class="sep"></div>
+    <div class="gps-status gps-off" id="gps-status">
+      <span class="pulse-dot red"></span> GPS desactivado — Activa para compartir tu ubicación
+    </div>
+    <button class="btn btn-primary btn-full" style="margin-top:8px;" id="btn-gps" onclick="toggleGPS()">📡 Activar ubicación en vivo</button>
+  </div>
+
+  <!-- COLA DE SINCRONIZACIÓN -->
+  <div class="alert alert-warn" id="sync-pending" style="display:none;"></div>
+
+  <!-- RUTA -->
+  <div class="card">
+    <div class="section-hdr">
+      <h2>🗺️ Mi ruta de hoy</h2>
+      <span class="badge badge-amber" id="ruta-pendiente-cnt">0 pendientes</span>
+    </div>
+    <div id="lista-ruta"><div class="skeleton" style="height:60px;"></div></div>
+  </div>
+
+  <!-- CONFIRMAR ENTREGA -->
+  <div class="card" id="card-entrega" style="display:none;">
+    <div class="card-title">📸 Confirmar entrega</div>
+    <div class="alert alert-info" id="entrega-pedido-info"></div>
+
+    <div class="photo-zone" id="photo-zone" onclick="document.getElementById('foto-input').click()">
+      <div id="photo-placeholder">📷 Toca para tomar foto de la entrega</div>
+      <img id="foto-preview" style="display:none;max-width:100%;border-radius:8px;margin-top:8px;">
+      <input type="file" id="foto-input" accept="image/*" capture="environment" onchange="procesarFoto(this)">
+    </div>
+
+    <textarea id="nota-entrega" placeholder="Nota (opcional): Ej. Dejé con vecino, portón rojo..." style="width:100%;margin-top:10px;border:1px solid #d0cec8;border-radius:6px;padding:9px;font-size:13px;resize:none;height:70px;font-family:inherit;"></textarea>
+
+    <button class="btn btn-primary btn-full" style="margin-top:10px;font-size:15px;padding:14px;" id="btn-confirmar" onclick="confirmarEntrega()">
+      ✅ Confirmar entrega
+    </button>
+    <button class="btn btn-outline btn-full" style="margin-top:6px;" onclick="cerrarEntrega()">Cancelar</button>
+  </div>
+
+  <!-- CONFIRMACIÓN -->
+  <div class="card" id="card-confirmado" style="display:none;border-left:4px solid var(--green);">
+    <div style="text-align:center;padding:10px 0;">
+      <div style="font-size:40px;">✅</div>
+      <div style="font-weight:800;font-size:18px;color:var(--green);margin-top:6px;">¡Entrega confirmada!</div>
+      <div id="confirmado-txt" style="font-size:13px;color:var(--gray);margin-top:4px;"></div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script src="js/offline-queue.js"></script>
+<script src="js/repartidor.js"></script>
+</body>
+</html>

@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Iniciar sesión — TortillaRuta</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    .auth-wrap { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .auth-card { max-width: 380px; width: 100%; }
+    .auth-logo { text-align: center; margin-bottom: 24px; }
+    .auth-logo .name { font-size: 24px; font-weight: 800; color: var(--primary-dark); }
+    .auth-logo .name span { color: var(--accent); }
+    .auth-logo .tag { font-size: 13px; color: var(--gray); margin-top: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="auth-wrap">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <div class="name">Torti<span>Rappi</span></div>
+      <div class="tag">Gestión de entregas para tu tortilleria</div>
+    </div>
+
+    <div class="card">
+      <h2 style="font-size:16px;margin-bottom:14px;">Iniciar sesión</h2>
+
+      <div id="error-box" class="alert alert-danger" style="display:none;"></div>
+
+      <div class="form-group full" style="margin-bottom:10px;">
+        <label>Correo electrónico</label>
+        <input type="email" id="email" placeholder="tu@correo.com" autocomplete="email">
+      </div>
+      <div class="form-group full" style="margin-bottom:14px;">
+        <label>Contraseña</label>
+        <input type="password" id="password" placeholder="••••••••" autocomplete="current-password">
+      </div>
+
+      <button class="btn btn-primary btn-full" id="btn-login" onclick="hacerLogin()">Entrar</button>
+
+      <div class="sep"></div>
+
+      <p style="text-align:center;font-size:13px;color:var(--gray);">
+        ¿No tienes cuenta?
+        <a href="registro.html" style="color:var(--primary-dark);font-weight:700;text-decoration:none;">Registra tu negocio</a>
+      </p>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/auth.js"></script>
+<script>
+// Si ya hay sesión activa, redirigir directo
+(async () => {
+  const session = await Auth.getSession();
+  if (session) {
+    const perfil = await Auth.getPerfil();
+    window.location.href = perfil?.rol === 'repartidor' ? 'repartidor.html' : 'admin.html';
+  }
+})();
+
+async function hacerLogin() {
+  const email    = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errBox   = document.getElementById('error-box');
+  const btn      = document.getElementById('btn-login');
+
+  errBox.style.display = 'none';
+  if (!email || !password) {
+    errBox.textContent = 'Ingresa tu correo y contraseña.';
+    errBox.style.display = 'flex';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Entrando...';
+
+  const { error } = await Auth.login(email, password);
+
+  if (error) {
+    errBox.textContent = error;
+    errBox.style.display = 'flex';
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    return;
+  }
+
+  const perfil = await Auth.getPerfil();
+  window.location.href = perfil?.rol === 'repartidor' ? 'repartidor.html' : 'admin.html';
+}
+
+// Enter para enviar
+document.getElementById('password').addEventListener('keydown', e => {
+  if (e.key === 'Enter') hacerLogin();
+});
+</script>
+</body>
+</html>

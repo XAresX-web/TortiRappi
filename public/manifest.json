@@ -1,0 +1,14 @@
+{
+  "name": "TortillaRuta — Gestión de Entregas",
+  "short_name": "TortillaRuta",
+  "description": "Administra rutas, repartidores y pedidos en tiempo real",
+  "start_url": "/login.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#1D9E75",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
