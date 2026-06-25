@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>Pedir — TortiRappi</title>
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    body { background: #f5f4f0; }
+    .catalog-wrap { max-width: 480px; margin: 0 auto; padding: 16px; padding-bottom: 40px; }
+    .brand-header { text-align: center; padding: 20px 16px 8px; }
+    .brand-name { font-size: 22px; font-weight: 800; color: var(--primary-dark); }
+    .brand-name span { color: var(--accent); }
+    .brand-sub { font-size: 13px; color: var(--gray); margin-top: 4px; }
+    .negocio-header { text-align: center; padding: 8px 0 4px; }
+    .negocio-name { font-size: 20px; font-weight: 800; color: var(--primary-dark); }
+    .negocio-dir { font-size: 13px; color: var(--gray); margin-top: 4px; }
+    .prod-card { display: flex; align-items: center; gap: 12px; padding: 12px; border: 0.5px solid #e4e2dc; border-radius: var(--radius-sm); margin-bottom: 8px; background: #fff; transition: border-color 0.15s; }
+    .prod-card.selected { border-color: var(--primary); background: var(--primary-light); }
+    .prod-info { flex: 1; min-width: 0; }
+    .prod-nombre { font-weight: 700; font-size: 14px; }
+    .prod-precio { font-size: 14px; color: var(--primary-dark); font-weight: 800; margin-top: 2px; }
+    .qty-ctrl { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    .qty-btn { width: 34px; height: 34px; border-radius: 50%; border: 1.5px solid #d0cec8; background: #fff; font-size: 18px; font-weight: 700; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--gray-dark); transition: all 0.15s; user-select: none; }
+    .qty-btn:active { background: var(--primary-light); border-color: var(--primary); }
+    .qty-val { font-weight: 800; font-size: 16px; min-width: 24px; text-align: center; }
+    .qty-val.has { color: var(--primary-dark); }
+    .resumen-item { display: flex; justify-content: space-between; font-size: 13px; padding: 4px 0; }
+    .resumen-total { display: flex; justify-content: space-between; font-weight: 800; font-size: 16px; padding-top: 8px; border-top: 1.5px solid var(--primary); margin-top: 8px; color: var(--primary-dark); }
+  </style>
+</head>
+<body>
+
+<div class="brand-header">
+  <div class="brand-name">Torti<span>Rappi</span></div>
+  <div class="brand-sub">Haz tu pedido en linea</div>
+</div>
+
+<div class="catalog-wrap">
+
+  <!-- LOADING -->
+  <div class="card" id="loading" style="text-align:center;padding:30px;">
+    <div style="font-size:32px;animation:pulse 1.5s infinite;display:inline-block;">🫓</div>
+    <div style="font-size:14px;color:var(--gray);margin-top:8px;">Cargando catalogo...</div>
+  </div>
+
+  <!-- NOT FOUND -->
+  <div class="card" id="not-found" style="display:none;text-align:center;padding:30px;">
+    <div style="font-size:40px;margin-bottom:12px;">🔍</div>
+    <div style="font-weight:700;font-size:16px;margin-bottom:6px;">Negocio no encontrado</div>
+    <div style="font-size:13px;color:var(--gray);">El enlace puede ser incorrecto. Verifica con el negocio.</div>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div id="main-content" style="display:none;">
+
+    <div class="card negocio-header">
+      <div class="negocio-name" id="negocio-nombre"></div>
+      <div class="negocio-dir" id="negocio-dir"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">🛒 Nuestros productos</div>
+      <div id="productos-lista"></div>
+    </div>
+
+    <!-- RESUMEN (se muestra cuando hay items) -->
+    <div class="card" id="card-resumen" style="display:none;">
+      <div class="card-title">📋 Tu pedido</div>
+      <div id="resumen-productos"></div>
+      <div class="resumen-total">
+        <span>Total</span>
+        <span id="resumen-total">$0.00</span>
+      </div>
+    </div>
+
+    <!-- DATOS DE ENTREGA -->
+    <div class="card">
+      <div class="card-title">📍 Datos de entrega</div>
+      <div class="form-group full" style="margin-bottom:10px;">
+        <label>Tu nombre *</label>
+        <input type="text" id="f-nombre" placeholder="Ej. Ana Garcia">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Telefono / WhatsApp</label>
+          <input type="tel" id="f-tel" placeholder="33 1234 5678">
+        </div>
+      </div>
+      <div class="form-group full" style="margin-bottom:10px;">
+        <label>Direccion de entrega *</label>
+        <input type="text" id="f-dir" placeholder="Calle, numero, colonia, referencias">
+      </div>
+      <div class="form-group full" style="margin-bottom:14px;">
+        <label>Notas del pedido</label>
+        <textarea id="f-notas" placeholder="Instrucciones especiales..."></textarea>
+      </div>
+
+      <button class="btn btn-primary btn-full" id="btn-pedir" onclick="hacerPedido()" disabled style="font-size:15px;padding:14px;">
+        Selecciona al menos un producto
+      </button>
+    </div>
+  </div>
+
+  <!-- SUCCESS VIEW -->
+  <div id="success-view" style="display:none;">
+    <div class="card" style="text-align:center;padding:24px 16px;">
+      <div style="font-size:48px;">✅</div>
+      <div style="font-size:20px;font-weight:800;color:var(--primary-dark);margin-top:8px;">Pedido confirmado</div>
+      <div style="font-size:28px;font-weight:800;color:var(--primary-dark);margin-top:4px;" id="success-num"></div>
+      <div style="font-size:14px;color:var(--gray);margin-top:6px;">Total: <strong id="success-total"></strong></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">📲 Sigue tu pedido</div>
+      <div style="background:var(--primary-light);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--primary-dark);word-break:break-all;margin-bottom:12px;" id="success-tracking-url"></div>
+      <a id="success-tracking-link" href="#" target="_blank" style="text-decoration:none;">
+        <button class="btn btn-primary btn-full">Ver estado de mi pedido</button>
+      </a>
+    </div>
+
+    <div class="card">
+      <a id="success-wa-btn" href="#" target="_blank" style="text-decoration:none;">
+        <button class="btn btn-wa btn-full">Contactar al negocio por WhatsApp</button>
+      </a>
+    </div>
+
+    <div style="text-align:center;margin-top:16px;">
+      <button class="btn btn-outline" onclick="location.reload()">Hacer otro pedido</button>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script src="js/config.js"></script>
+<script src="js/pedir.js"></script>
+</body>
+</html>

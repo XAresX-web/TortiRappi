@@ -8,6 +8,7 @@ let pedidosCache = [];
 let repsCache    = [];
 let pedidoAsignarId = null;
 let pedidoTrackingActual = null;
+let productosCache = [];
 
 let gmap = null;
 let mapMarkers = {}; // repartidor_id -> marker
@@ -34,16 +35,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   suscribirRealtime();
 
   whenGoogleMapsReady(() => initMapa());
+
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 });
 
 // ── CARGA DE DATOS ────────────────────────────────────────
 async function cargarTodo() {
-  await Promise.all([cargarPedidos(), cargarRepartidores(), cargarUbicaciones()]);
+  await Promise.all([cargarPedidos(), cargarRepartidores(), cargarUbicaciones(), cargarProductos()]);
   renderMetricas();
   renderPedidos();
   renderReps();
+  renderProductos();
   renderRendimiento();
   poblarSelectRep();
+  poblarSelectProd();
   actualizarMapa();
 }
 
@@ -80,6 +87,15 @@ async function cargarUbicaciones() {
   (data || []).forEach(u => ubicacionesCache[u.repartidor_id] = u);
 }
 
+async function cargarProductos() {
+  const { data, error } = await supabaseClient
+    .from('productos')
+    .select('*')
+    .order('orden', { ascending: true });
+  if (error) { console.error('[Productos]', error); return; }
+  productosCache = data || [];
+}
+
 // ── REALTIME ──────────────────────────────────────────────
 function suscribirRealtime() {
   supabaseClient
@@ -88,7 +104,18 @@ function suscribirRealtime() {
       async (payload) => {
         await cargarPedidos();
         renderMetricas(); renderPedidos(); renderRendimiento();
-        toast('Pedidos actualizados');
+        if (payload.eventType === 'INSERT' && payload.new) {
+          const p = payload.new;
+          playNotifSound();
+          showNotification(
+            `Nuevo pedido #${String(p.numero).padStart(3,'0')}`,
+            `${p.cliente_nombre} — ${p.direccion || ''}`,
+            `pedido-${p.id}`
+          );
+          toast(`Nuevo pedido #${String(p.numero).padStart(3,'0')} de ${p.cliente_nombre}`);
+        } else {
+          toast('Pedidos actualizados');
+        }
       })
     .subscribe();
 
@@ -98,6 +125,16 @@ function suscribirRealtime() {
       async (payload) => {
         if (payload.new) ubicacionesCache[payload.new.repartidor_id] = payload.new;
         actualizarMapa();
+      })
+    .subscribe();
+
+  supabaseClient
+    .channel('admin-productos')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'productos', filter: `organizacion_id=eq.${org.id}` },
+      async () => {
+        await cargarProductos();
+        renderProductos();
+        poblarSelectProd();
       })
     .subscribe();
 }
@@ -573,6 +610,148 @@ async function guardarConfig() {
   document.getElementById('org-nombre').textContent = org.nombre;
   closeModal('config');
   toast('Configuración guardada');
+}
+
+// ── PRODUCTOS ────────────────────────────────────────────
+
+function renderProductos() {
+  const el = document.getElementById('lista-productos');
+  if (!productosCache.length) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">🛒</div>Sin productos. Agrega el primero para activar tu catalogo publico.</div>';
+    return;
+  }
+  el.innerHTML = productosCache.map(p => {
+    const badge = p.disponible
+      ? '<span class="badge badge-green">Disponible</span>'
+      : '<span class="badge badge-gray">No disponible</span>';
+    return `
+      <div class="rep-item" style="cursor:default;">
+        <div style="flex:1;">
+          <div class="rep-name">${escapeHtml(p.nombre)}</div>
+          <div class="rep-detail">$${Number(p.precio).toFixed(2)}</div>
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${badge}
+          <button class="btn btn-outline btn-sm" onclick="editarProducto(${p.id})">Editar</button>
+          <button class="btn btn-outline btn-sm" onclick="toggleProducto(${p.id})">${p.disponible ? '🚫' : '✅'}</button>
+          <button class="btn btn-outline btn-sm" style="color:var(--red);" onclick="eliminarProducto(${p.id})">✕</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function guardarProducto() {
+  const nombre = getVal('p-nombre').trim();
+  const precio = parseFloat(getVal('p-precio'));
+  const orden = parseInt(getVal('p-orden')) || 0;
+  const editId = getVal('p-edit-id');
+
+  if (!nombre || isNaN(precio)) { alert('Nombre y precio son obligatorios.'); return; }
+
+  const btn = document.getElementById('btn-guardar-prod');
+  btn.disabled = true;
+
+  if (editId) {
+    const { error } = await supabaseClient.from('productos').update({ nombre, precio, orden }).eq('id', editId);
+    if (error) { alert('Error: ' + error.message); btn.disabled = false; return; }
+  } else {
+    const { error } = await supabaseClient.from('productos').insert({ organizacion_id: org.id, nombre, precio, orden });
+    if (error) { alert('Error: ' + error.message); btn.disabled = false; return; }
+  }
+
+  btn.disabled = false;
+  await cargarProductos();
+  renderProductos();
+  poblarSelectProd();
+  closeModal('nuevo-prod');
+  setVal('p-nombre', ''); setVal('p-precio', ''); setVal('p-orden', ''); setVal('p-edit-id', '');
+  document.getElementById('modal-prod-title').textContent = 'Agregar producto';
+  toast(editId ? 'Producto actualizado' : 'Producto agregado');
+}
+
+function editarProducto(id) {
+  const p = productosCache.find(x => x.id === id);
+  if (!p) return;
+  setVal('p-nombre', p.nombre);
+  setVal('p-precio', p.precio);
+  setVal('p-orden', p.orden);
+  setVal('p-edit-id', id);
+  document.getElementById('modal-prod-title').textContent = 'Editar producto';
+  openModal('nuevo-prod');
+}
+
+async function toggleProducto(id) {
+  const p = productosCache.find(x => x.id === id);
+  if (!p) return;
+  const { error } = await supabaseClient.from('productos').update({ disponible: !p.disponible }).eq('id', id);
+  if (error) { alert('Error: ' + error.message); return; }
+  await cargarProductos();
+  renderProductos();
+  poblarSelectProd();
+  toast(p.disponible ? 'Producto desactivado' : 'Producto activado');
+}
+
+async function eliminarProducto(id) {
+  if (!confirm('¿Eliminar este producto del catalogo?')) return;
+  const { error } = await supabaseClient.from('productos').delete().eq('id', id);
+  if (error) { alert('Error: ' + error.message); return; }
+  await cargarProductos();
+  renderProductos();
+  poblarSelectProd();
+  toast('Producto eliminado');
+}
+
+function poblarSelectProd() {
+  const sel = document.getElementById('f-prod');
+  const disp = productosCache.filter(p => p.disponible);
+  sel.innerHTML = '<option value="">Seleccionar producto</option>' +
+    disp.map(p => `<option value="${escapeHtml(p.nombre)}" data-precio="${p.precio}">${escapeHtml(p.nombre)} — $${Number(p.precio).toFixed(2)}</option>`).join('') +
+    '<option value="Otro">Otro (escribir en notas)</option>';
+}
+
+function autoFillTotal() {
+  const sel = document.getElementById('f-prod');
+  const opt = sel.options[sel.selectedIndex];
+  if (opt && opt.dataset.precio) {
+    setVal('f-total', opt.dataset.precio);
+  }
+}
+
+function compartirCatalogo() {
+  const url = `${APP_URL}/pedir.html?n=${org.slug}`;
+  document.getElementById('catalogo-url-box').textContent = url;
+  const waMsg = `Haz tu pedido de ${org.nombre} en linea! 🫓\n${url}`;
+  document.getElementById('catalogo-wa-link').href = `https://wa.me/?text=${encodeURIComponent(waMsg)}`;
+  openModal('catalogo');
+}
+
+function copiarURLCatalogo() {
+  const url = `${APP_URL}/pedir.html?n=${org.slug}`;
+  navigator.clipboard.writeText(url).then(() => toast('Enlace copiado')).catch(() => alert(url));
+}
+
+// ── NOTIFICACIONES ───────────────────────────────────────
+
+function playNotifSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 800;
+    gain.gain.value = 0.3;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (_) {}
+}
+
+function showNotification(title, body, tag) {
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification(title, { body, icon: '/icons/icon-192.png', tag: tag || 'tortirappi', renotify: true });
+    n.onclick = () => { window.focus(); n.close(); };
+  }
 }
 
 // ── HELPERS ───────────────────────────────────────────────

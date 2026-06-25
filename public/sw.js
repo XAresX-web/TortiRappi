@@ -1,4 +1,4 @@
-const CACHE = 'tortirappi-v2';
+const CACHE = 'tortirappi-v3';
 const ASSETS = [
   '/',
   '/login.html',
@@ -6,12 +6,14 @@ const ASSETS = [
   '/admin.html',
   '/repartidor.html',
   '/tracking.html',
+  '/pedir.html',
   '/css/style.css',
   '/js/config.js',
   '/js/auth.js',
   '/js/admin.js',
   '/js/repartidor.js',
   '/js/tracking.js',
+  '/js/pedir.js',
   '/js/offline-queue.js',
   '/js/maps-loader.js',
 ];

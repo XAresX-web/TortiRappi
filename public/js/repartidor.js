@@ -34,6 +34,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (localStorage.getItem('gps_activo') === '1') {
     toggleGPS();
   }
+
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
+  }
 });
 
 // ── CARGAR PEDIDOS ASIGNADOS A MÍ (HOY) ──────────────────
@@ -65,9 +69,23 @@ function suscribirRealtime() {
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'pedidos', filter: `repartidor_id=eq.${perfil.id}` },
       async () => {
+        const prevIds = new Set(pedidosRep.map(p => p.id));
         await cargarPedidos();
         renderRuta();
-        toast('Tu ruta se actualizó');
+
+        const nuevos = pedidosRep.filter(p => !prevIds.has(p.id) && p.estado !== 'entregado');
+        if (nuevos.length > 0) {
+          const p = nuevos[0];
+          playNotifSound();
+          showNotificationRep(
+            `Te asignaron pedido #${String(p.numero).padStart(3,'0')}`,
+            `${p.cliente_nombre} — ${p.direccion || ''}`,
+            `pedido-rep-${p.id}`
+          );
+          toast(`Nuevo pedido asignado: #${String(p.numero).padStart(3,'0')}`);
+        } else {
+          toast('Tu ruta se actualizo');
+        }
       })
     .subscribe();
 }
@@ -394,6 +412,32 @@ function setupOnlineOffline() {
 function registrarSW() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
+}
+
+// ── NOTIFICACIONES ───────────────────────────────────────
+function playNotifSound() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = 800;
+    gain.gain.value = 0.3;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.3);
+  } catch (_) {}
+}
+
+function showNotificationRep(title, body, tag) {
+  if ('vibrate' in navigator) {
+    navigator.vibrate([200, 100, 200]);
+  }
+  if ('Notification' in window && Notification.permission === 'granted') {
+    const n = new Notification(title, { body, icon: '/icons/icon-192.png', tag: tag || 'tortirappi-rep', renotify: true });
+    n.onclick = () => { window.focus(); n.close(); };
   }
 }
 

@@ -78,6 +78,18 @@
     <div id="rep-limit-msg" class="alert alert-warn" style="display:none;margin-top:8px;"></div>
   </div>
 
+  <!-- PRODUCTOS / CATÁLOGO -->
+  <div class="card">
+    <div class="section-hdr">
+      <h2>🛒 Productos</h2>
+      <div style="display:flex;gap:6px;">
+        <button class="btn btn-outline btn-sm" onclick="compartirCatalogo()">🔗 Compartir catalogo</button>
+        <button class="btn btn-outline btn-sm" onclick="openModal('nuevo-prod')">+ Agregar</button>
+      </div>
+    </div>
+    <div id="lista-productos"></div>
+  </div>
+
   <!-- RENDIMIENTO -->
   <div class="card">
     <div class="card-title">📊 Rendimiento de hoy</div>
@@ -110,15 +122,8 @@
     <div class="form-row">
       <div class="form-group">
         <label>Producto</label>
-        <select id="f-prod">
-          <option>Tortilla de maíz 500g</option>
-          <option>Tortilla de maíz 1kg</option>
-          <option>Tortilla de maíz 2kg</option>
-          <option>Tortilla de harina 500g</option>
-          <option>Tortilla de harina 1kg</option>
-          <option>Paquete mixto 3kg</option>
-          <option>Paquete mixto 5kg</option>
-          <option>Otro (escribir en notas)</option>
+        <select id="f-prod" onchange="autoFillTotal()">
+          <option value="">Cargando productos...</option>
         </select>
       </div>
       <div class="form-group">
@@ -259,6 +264,50 @@
       <button class="btn btn-wa btn-full">Abrir WhatsApp y enviar al cliente</button>
     </a>
     <button class="btn btn-outline btn-full" style="margin-top:8px;" onclick="copiarMensajeWA()">📋 Copiar mensaje</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: NUEVO/EDITAR PRODUCTO ===== -->
+<div class="modal-overlay" id="modal-nuevo-prod">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-prod-title">Agregar producto</div>
+      <button class="modal-close" onclick="closeModal('nuevo-prod')">✕</button>
+    </div>
+    <div class="form-group full" style="margin-bottom:10px;">
+      <label>Nombre del producto *</label>
+      <input type="text" id="p-nombre" placeholder="Ej. Tortilla de maiz 1kg">
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Precio ($) *</label>
+        <input type="number" id="p-precio" placeholder="28.00" step="0.50" min="0">
+      </div>
+      <div class="form-group">
+        <label>Orden de aparicion</label>
+        <input type="number" id="p-orden" placeholder="1" min="0">
+      </div>
+    </div>
+    <input type="hidden" id="p-edit-id" value="">
+    <button class="btn btn-primary btn-full" id="btn-guardar-prod" onclick="guardarProducto()">Guardar producto</button>
+  </div>
+</div>
+
+<!-- ===== MODAL: COMPARTIR CATÁLOGO ===== -->
+<div class="modal-overlay" id="modal-catalogo">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title">🔗 Catalogo publico</div>
+      <button class="modal-close" onclick="closeModal('catalogo')">✕</button>
+    </div>
+    <div class="alert alert-info" style="margin-bottom:12px;">
+      Comparte este enlace para que tus clientes puedan hacer pedidos directamente.
+    </div>
+    <div id="catalogo-url-box" style="background:var(--primary-light);border-radius:6px;padding:10px 14px;font-size:13px;color:var(--primary-dark);word-break:break-all;margin-bottom:12px;"></div>
+    <button class="btn btn-primary btn-full" onclick="copiarURLCatalogo()">📋 Copiar enlace</button>
+    <a id="catalogo-wa-link" href="#" target="_blank" style="display:block;margin-top:8px;text-decoration:none;">
+      <button class="btn btn-wa btn-full">Compartir por WhatsApp</button>
+    </a>
   </div>
 </div>
 
