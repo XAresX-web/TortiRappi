@@ -80,22 +80,25 @@ const Auth = {
     return { data: { userId, slug } };
   },
 
-  // ── Crear repartidor (lo hace el dueño/admin desde el panel) ──
-  // NOTA: requiere que el repartidor confirme su correo o que
-  // "Confirm email" esté desactivado en Supabase para pruebas.
   async crearRepartidor({ email, password, nombreCompleto, telefono, zona }) {
     const org = await this.getOrganizacion();
     if (!org) return { error: 'No se encontró tu organización.' };
 
-    // Crear usuario auth (esto cierra la sesión del admin temporalmente
-    // en algunos flujos — se maneja con signUp que no cambia la sesión activa
-    // si "autoconfirm" está activo, pero recomendamos hacerlo desde un
-    // dispositivo aparte o re-loguear al admin después)
+    const { data: { session: adminSession } } = await supabaseClient.auth.getSession();
+
     const { data: authData, error: authError } = await supabaseClient.auth.signUp({ email, password });
     if (authError) return { error: traducirError(authError.message) };
 
     const userId = authData.user?.id;
     if (!userId) return { error: 'No se pudo crear el usuario repartidor.' };
+
+    // Restaurar sesión del admin (signUp puede cambiarla)
+    if (adminSession) {
+      await supabaseClient.auth.setSession({
+        access_token: adminSession.access_token,
+        refresh_token: adminSession.refresh_token,
+      });
+    }
 
     const { error: insertError } = await supabaseClient.from('perfiles').insert({
       id: userId,

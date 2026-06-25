@@ -6,7 +6,7 @@
    automáticamente a Supabase (incluyendo la foto).
    ============================================================ */
 
-const OQ_DB_NAME = 'tortillaruta_offline';
+const OQ_DB_NAME = 'tortirappi_offline';
 const OQ_STORE   = 'entregas_pendientes';
 let _oqDb = null;
 

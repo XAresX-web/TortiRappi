@@ -24,10 +24,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
 async function cargarYRender() {
   const { data, error } = await supabaseClient
-    .from('tracking_publico')
-    .select('*')
-    .eq('tracking_token', token)
-    .single();
+    .rpc('obtener_tracking', { p_token: token });
 
   if (error || !data) { mostrarNoEncontrado(); return; }
 

@@ -1,6 +1,6 @@
 {
-  "name": "TortillaRuta — Gestión de Entregas",
-  "short_name": "TortillaRuta",
+  "name": "TortiRappi — Gestión de Entregas",
+  "short_name": "TortiRappi",
   "description": "Administra rutas, repartidores y pedidos en tiempo real",
   "start_url": "/login.html",
   "display": "standalone",

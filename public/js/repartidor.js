@@ -89,7 +89,7 @@ function renderRuta() {
     const done   = p.estado === 'entregado';
     const activo = !done && i === primerActivo;
     const numCls = done ? 'done' : activo ? 'active' : '';
-    const dirEnc = encodeURIComponent((p.direccion || '') + ', Tlaquepaque, Jalisco');
+    const dirEnc = encodeURIComponent(p.direccion || '');
 
     return `
       <div class="route-item" style="${activo ? 'border-color:var(--primary);background:var(--primary-light);' : ''}">

@@ -1,5 +1,5 @@
 -- ============================================================
--- TortillaRuta SaaS — Esquema de base de datos (Supabase / Postgres)
+-- TortiRappi — Esquema de base de datos (Supabase / Postgres)
 -- ============================================================
 -- Cómo usar este archivo:
 -- 1. Entra a tu proyecto en https://supabase.com
@@ -85,7 +85,7 @@ create table pedidos (
   repartidor_id       uuid references perfiles(id) on delete set null,
 
   -- Tracking
-  tracking_token      text unique not null default substr(md5(random()::text), 1, 10),
+  tracking_token      text unique not null default replace(uuid_generate_v4()::text, '-', ''),
 
   -- Comprobante de entrega
   foto_entrega_url    text,                          -- URL en Supabase Storage
@@ -114,6 +114,7 @@ comment on table pedidos is 'Pedidos de cada negocio, aislados por organizacion_
 create or replace function siguiente_numero_pedido()
 returns trigger as $$
 begin
+  perform pg_advisory_xact_lock(hashtext(new.organizacion_id::text));
   select coalesce(max(numero), 0) + 1 into new.numero
   from pedidos
   where organizacion_id = new.organizacion_id;
@@ -357,10 +358,25 @@ join organizaciones o on o.id = p.organizacion_id
 left join ubicaciones_repartidores u on u.repartidor_id = p.repartidor_id
 where p.estado != 'cancelado';
 
--- Esta vista es accesible públicamente (sin autenticación) porque
--- el "tracking_token" actúa como contraseña: solo quien tiene el
--- link puede consultar ESE pedido específico.
-grant select on tracking_publico to anon;
+-- Acceso seguro: solo a través de la función con token específico
+-- (no se permite consultar la vista completa sin filtro)
+
+create or replace function obtener_tracking(p_token text)
+returns json as $$
+select row_to_json(sub) from (
+  select
+    t.tracking_token, t.numero, t.cliente_nombre, t.direccion,
+    t.producto, t.total, t.estado, t.notas,
+    t.foto_entrega_url, t.nota_entrega,
+    t.creado_en, t.asignado_en, t.en_ruta_en, t.entregado_en, t.actualizado_en,
+    t.repartidor_lat, t.repartidor_lng, t.ubicacion_actualizada_en,
+    t.negocio_nombre, t.negocio_telefono, t.negocio_direccion
+  from tracking_publico t
+  where t.tracking_token = p_token
+) sub;
+$$ language sql stable security definer;
+
+grant execute on function obtener_tracking(text) to anon;
 
 
 -- ────────────────────────────────────────────────────────────

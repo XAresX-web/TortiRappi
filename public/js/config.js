@@ -17,7 +17,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 const GOOGLE_MAPS_API_KEY = 'AIzaSyDYVyLIZY8L0M7pf-u_uKw2b3stjkClzyc';
 
 // 4. URL base donde está publicada tu app (sin / al final)
-//    Ejemplo: 'https://tortillaruta.netlify.app'
+//    Ejemplo: 'https://tortirappi.netlify.app'
 const APP_URL = window.location.origin;
 
 // ── No edites debajo de esta línea ──────────────────────────
